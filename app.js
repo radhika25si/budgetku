@@ -377,34 +377,50 @@ function renderHome() {
   const barSavings = document.getElementById('bar-macro-savings');
   if (barSavings) barSavings.style.width = `${savingsPct}%`;
 
-  // Weekly Budget Spotlight
-  const weeklyTarget = 600000;
+  // Weekly Budget Spotlight - Hitung dinamis dari total batas mingguan di sheet Budgets
+  const calculatedWeeklyTarget = (d.budgets || []).reduce((acc, curr) => acc + (Number(curr.weekly_limit) || 0), 0);
+  const weeklyTarget = calculatedWeeklyTarget;
   const weeklySpent = d.weeklyExpense || 0;
   const weeklyRemain = Math.max(0, weeklyTarget - weeklySpent);
-  const weeklyPct = Math.min(100, Math.round((weeklySpent / weeklyTarget) * 100));
+  const weeklyPct = weeklyTarget > 0 ? Math.min(100, Math.round((weeklySpent / weeklyTarget) * 100)) : 0;
 
   const elWeeklySpent = document.getElementById('val-weekly-spent');
-  if (elWeeklySpent) elWeeklySpent.innerText = state.isMasked ? 'Rp •••••' : `${formatRupiah(weeklySpent)} / ${formatRupiah(weeklyTarget)}`;
+  if (elWeeklySpent) {
+    elWeeklySpent.innerText = state.isMasked ? 'Rp •••••' : `${formatRupiah(weeklySpent)} / ${formatRupiah(weeklyTarget)}`;
+  }
   
   const elWeeklyRemain = document.getElementById('val-weekly-remaining');
-  if (elWeeklyRemain) elWeeklyRemain.innerText = state.isMasked ? 'Rp •••••' : formatRupiah(weeklyRemain);
+  if (elWeeklyRemain) {
+    elWeeklyRemain.innerText = state.isMasked ? 'Rp •••••' : formatRupiah(weeklyRemain);
+  }
 
   const barWeekly = document.getElementById('bar-weekly-spent');
   if (barWeekly) {
     barWeekly.style.width = `${weeklyPct}%`;
-    if (weeklyPct > 90) barWeekly.className = 'h-full bg-rose-500 transition-all duration-300';
-    else if (weeklyPct > 75) barWeekly.className = 'h-full bg-amber-500 transition-all duration-300';
-    else barWeekly.className = 'h-full bg-emerald-500 transition-all duration-300';
+    if (weeklyTarget === 0) {
+      barWeekly.className = 'h-full bg-slate-300 dark:bg-slate-700 transition-all duration-300';
+    } else if (weeklyPct > 90) {
+      barWeekly.className = 'h-full bg-rose-500 transition-all duration-300';
+    } else if (weeklyPct > 75) {
+      barWeekly.className = 'h-full bg-amber-500 transition-all duration-300';
+    } else {
+      barWeekly.className = 'h-full bg-emerald-500 transition-all duration-300';
+    }
   }
 
   const badgeWeekStatus = document.getElementById('badge-week-status');
   if (badgeWeekStatus) {
-    badgeWeekStatus.innerText = weeklyPct > 100 ? 'Over Budget' : weeklyPct > 80 ? 'Hati-hati' : 'Aman';
-    badgeWeekStatus.className = weeklyPct > 100 
-      ? 'text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 font-bold'
-      : weeklyPct > 80
-      ? 'text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-bold'
-      : 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold';
+    if (weeklyTarget === 0) {
+      badgeWeekStatus.innerText = 'Belum Diatur';
+      badgeWeekStatus.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-bold';
+    } else {
+      badgeWeekStatus.innerText = weeklyPct > 100 ? 'Over Budget' : weeklyPct > 80 ? 'Hati-hati' : 'Aman';
+      badgeWeekStatus.className = weeklyPct > 100 
+        ? 'text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 font-bold'
+        : weeklyPct > 80
+        ? 'text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-bold'
+        : 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold';
+    }
   }
 
   // Quick Upcoming Bills
