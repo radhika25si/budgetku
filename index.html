@@ -533,7 +533,7 @@
           <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Nominal Transaksi</p>
           <div class="flex items-center justify-center gap-1">
             <span class="text-xl font-bold text-slate-400">Rp</span>
-            <input type="number" id="input-add-amount" placeholder="0" class="text-3xl font-extrabold bg-transparent text-slate-900 dark:text-white text-center outline-none w-48 tracking-tight">
+            <input type="text" inputmode="numeric" id="input-add-amount" placeholder="0" class="amountInput text-3xl font-extrabold bg-transparent text-slate-900 dark:text-white text-center outline-none w-48 tracking-tight">
           </div>
         </div>
 
@@ -613,7 +613,7 @@
 
         <div>
           <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Nominal Transfer (Rp)</label>
-          <input type="number" id="input-transfer-amount" placeholder="0" class="w-full p-2.5 text-sm font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          <input type="text" inputmode="numeric" id="input-transfer-amount" placeholder="0" class="amountInput w-full p-2.5 text-sm font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
         </div>
 
         <div>
@@ -657,7 +657,7 @@
 
         <div>
           <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Nominal (Rp)</label>
-          <input type="number" id="edit-tx-amount" class="w-full p-2.5 text-base font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          <input type="text" inputmode="numeric" id="edit-tx-amount" class="amountInput w-full p-2.5 text-base font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
         </div>
 
         <div>
@@ -698,7 +698,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Nominal (Rp)</label>
-            <input type="number" id="bill-input-amount" placeholder="0" class="w-full p-2.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+            <input type="text" inputmode="numeric" id="bill-input-amount" placeholder="0" class="amountInput w-full p-2.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tgl Jatuh Tempo (1-31)</label>
@@ -744,12 +744,12 @@
 
         <div>
           <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Batas Bulanan (Rp)</label>
-          <input type="number" id="budget-input-monthly" placeholder="1500000" class="w-full p-2.5 text-sm font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          <input type="text" inputmode="numeric" id="budget-input-monthly" placeholder="1.500.000" class="amountInput w-full p-2.5 text-sm font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
         </div>
 
         <div>
           <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Batas Mingguan (Rp)</label>
-          <input type="number" id="budget-input-weekly" placeholder="375000" class="w-full p-2.5 text-sm font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          <input type="text" inputmode="numeric" id="budget-input-weekly" placeholder="375.000" class="amountInput w-full p-2.5 text-sm font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
           <p class="text-[10px] text-slate-400 mt-1">Kosongkan untuk otomatis mengisi 1/4 dari batas bulanan.</p>
         </div>
 
@@ -780,7 +780,7 @@
 
         <div>
           <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Saldo Uang Asli Anda (Rp)</label>
-          <input type="number" id="wallet-input-balance" placeholder="0" class="w-full p-2.5 text-base font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          <input type="text" inputmode="numeric" id="wallet-input-balance" placeholder="0" class="amountInput w-full p-2.5 text-base font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
           <p class="text-[10px] text-slate-400 mt-1">Masukkan nominal uang yang saat ini benar-benar ada di dompet/rekening ini.</p>
         </div>
 

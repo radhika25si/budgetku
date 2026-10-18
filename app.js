@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   renderAll();
+  initAmountInputs();
 
   if (state.gasUrl) {
     fetchDashboard();
@@ -150,7 +151,39 @@ async function refreshData() {
   }
 }
 
-// 3. TOAST NOTIFICATION SYSTEM
+// -------------------------------------------------------
+// AMOUNT INPUT FORMATTER — auto titik saat mengetik
+// -------------------------------------------------------
+
+/** Ambil nilai bersih (angka) dari input yang sudah diformat */
+function parseAmount(inputEl) {
+  if (!inputEl) return 0;
+  return Number(String(inputEl.value).replace(/\./g, '')) || 0;
+}
+
+/** Set nilai input dengan format titik ribuan */
+function setAmountValue(inputEl, num) {
+  if (!inputEl) return;
+  const n = Number(num) || 0;
+  inputEl.value = n === 0 ? '' : n.toLocaleString('id-ID');
+}
+
+/** Pasang event listener format-titik ke semua .amountInput */
+function initAmountInputs() {
+  document.querySelectorAll('.amountInput').forEach(input => {
+    input.addEventListener('input', function () {
+      const raw = this.value.replace(/\./g, '').replace(/\D/g, '');
+      const num = Number(raw);
+      // Simpan posisi kursor
+      const len = num > 0 ? num.toLocaleString('id-ID').length : 0;
+      this.value = num > 0 ? num.toLocaleString('id-ID') : '';
+      // Pindahkan kursor ke akhir
+      try { this.setSelectionRange(len, len); } catch(e) {}
+    });
+  });
+}
+
+
 function showToast(message, type = 'success') {
   const box = document.getElementById('toast-box');
   const inner = document.getElementById('toast-inner');
@@ -767,16 +800,18 @@ function selectCategory(id) {
 
 function addQuickAmount(val) {
   const input = document.getElementById('input-add-amount');
-  const current = Number(input.value) || 0;
-  input.value = current + val;
+  const current = parseAmount(input);
+  setAmountValue(input, current + val);
 }
 
 function resetAmount() {
-  document.getElementById('input-add-amount').value = '';
+  const input = document.getElementById('input-add-amount');
+  input.value = '';
 }
 
 async function submitTransaction() {
-  const amount = Number(document.getElementById('input-add-amount').value);
+  const amountInput = document.getElementById('input-add-amount');
+  const amount = parseAmount(amountInput);
   if (!amount || amount <= 0) {
     showToast('Masukkan nominal yang valid!', 'error');
     return;
@@ -840,7 +875,7 @@ function openEditModal(id) {
 
   document.getElementById('edit-tx-id').value = tx.id;
   document.getElementById('edit-tx-date').value = tx.date;
-  document.getElementById('edit-tx-amount').value = tx.amount;
+  setAmountValue(document.getElementById('edit-tx-amount'), tx.amount);
   document.getElementById('edit-tx-notes').value = tx.notes || '';
 
   const wSel = document.getElementById('edit-tx-wallet');
@@ -863,7 +898,7 @@ function closeEditModal() {
 async function submitEditTransaction() {
   const id = document.getElementById('edit-tx-id').value;
   const date = document.getElementById('edit-tx-date').value;
-  const amount = Number(document.getElementById('edit-tx-amount').value);
+  const amount = parseAmount(document.getElementById('edit-tx-amount'));
   const wallet = document.getElementById('edit-tx-wallet').value;
   const category = document.getElementById('edit-tx-category').value;
   const notes = document.getElementById('edit-tx-notes').value;
@@ -914,7 +949,7 @@ function closeTransferModal() {
 async function submitTransfer() {
   const from = document.getElementById('select-transfer-from').value;
   const to = document.getElementById('select-transfer-to').value;
-  const amount = Number(document.getElementById('input-transfer-amount').value);
+  const amount = parseAmount(document.getElementById('input-transfer-amount'));
   const notes = document.getElementById('input-transfer-notes').value || 'Pindah Saldo';
 
   if (!amount || amount <= 0) {
@@ -978,7 +1013,7 @@ function closeAddBillModal() {
 
 function submitNewBill() {
   const name = document.getElementById('bill-input-name').value.trim();
-  const amount = Number(document.getElementById('bill-input-amount').value);
+  const amount = parseAmount(document.getElementById('bill-input-amount'));
   const dueDay = Number(document.getElementById('bill-input-day').value) || 1;
   const category = document.getElementById('bill-select-category').value;
   const wallet = document.getElementById('bill-select-wallet').value;
@@ -1054,8 +1089,8 @@ function closeSetBudgetModal() {
 
 async function submitSaveBudget() {
   const category = document.getElementById('budget-select-category').value;
-  const monthly = Number(document.getElementById('budget-input-monthly').value);
-  let weekly = Number(document.getElementById('budget-input-weekly').value);
+  const monthly = parseAmount(document.getElementById('budget-input-monthly'));
+  let weekly = parseAmount(document.getElementById('budget-input-weekly'));
 
   if (!monthly || monthly <= 0) {
     showToast('Masukkan batas bulanan yang valid!', 'error');
@@ -1151,7 +1186,7 @@ function openEditWalletModal(targetName, currentBal) {
 
   onWalletTargetChange();
   if (currentBal !== undefined) {
-    document.getElementById('wallet-input-balance').value = currentBal;
+    setAmountValue(document.getElementById('wallet-input-balance'), currentBal);
   }
 }
 
@@ -1167,7 +1202,7 @@ function onWalletTargetChange() {
 
   const w = state.data.wallets.find(wal => wal.wallet_name === sel.value);
   if (w) {
-    input.value = w.current_balance || 0;
+    setAmountValue(input, w.current_balance || 0);
   }
 }
 
@@ -1175,7 +1210,7 @@ async function submitEditWallet() {
   const sel = document.getElementById('wallet-select-target');
   const input = document.getElementById('wallet-input-balance');
   const walletName = sel.value;
-  const newBal = Number(input.value) || 0;
+  const newBal = parseAmount(input);
 
   const targetWallet = state.data.wallets.find(w => w.wallet_name === walletName);
   if (targetWallet) {
