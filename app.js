@@ -125,16 +125,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function refreshData() {
+  if (!state.gasUrl) {
+    showToast('Belum ada URL Script. Atur dulu di Pengaturan.', 'error');
+    return;
+  }
   const icon = document.getElementById('refresh-icon');
-  if (icon) icon.classList.add('animate-spin');
-  showToast('Menyinkronkan data dari Google Sheets...', 'info');
+  if (icon) {
+    icon.classList.add('animate-spin');
+    icon.style.pointerEvents = 'none';
+  }
+  showToast('Menyinkronkan data...', 'info');
 
-  await fetchDashboard();
+  const ok = await fetchDashboard();
 
-  setTimeout(() => {
-    if (icon) icon.classList.remove('animate-spin');
-    showToast('Data berhasil disinkronkan!');
-  }, 600);
+  if (icon) {
+    icon.classList.remove('animate-spin');
+    icon.style.pointerEvents = '';
+  }
+
+  if (ok) {
+    showToast('✅ Data berhasil disinkronkan!', 'success');
+  } else {
+    showToast('❌ Gagal sinkron. Cek URL Script di Pengaturan.', 'error');
+  }
 }
 
 // 3. TOAST NOTIFICATION SYSTEM
@@ -232,19 +245,24 @@ function updateStatusBadge() {
 
 // 5. API GOOGLE APPS SCRIPT
 async function fetchDashboard() {
-  if (!state.gasUrl) return;
+  if (!state.gasUrl) return false;
 
   updateLoading(true);
   try {
-    const res = await fetch(`${state.gasUrl}?action=getDashboard&month=${state.currentMonth}`);
+    const res = await fetch(`${state.gasUrl}?action=getDashboard&month=${state.currentMonth}`, { cache: 'no-store' });
     const json = await res.json();
     if (json.success && json.data) {
       state.data = { ...state.data, ...json.data };
       localStorage.setItem(STORAGE_KEYS.CACHE_DATA, JSON.stringify(state.data));
       renderAll();
+      return true;
+    } else {
+      console.warn('Response GAS tidak sukses:', json);
+      return false;
     }
   } catch (err) {
     console.warn('Gagal memuat dari Google Sheets:', err);
+    return false;
   } finally {
     updateLoading(false);
   }
