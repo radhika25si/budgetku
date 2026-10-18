@@ -46,6 +46,9 @@
   <!-- Phosphor Icons for Crisp Mobile UI -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+  <!-- Chart.js for Visual Analytics & Donut Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     /* Mobile app native touch feel */
     * {
@@ -77,6 +80,14 @@
   <!-- Main Container: Mobile view bounded to 480px on desktop -->
   <div class="w-full max-w-md min-h-screen flex flex-col relative bg-white dark:bg-darkbg shadow-2xl safe-bottom transition-colors duration-200">
     
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-box" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
+      <div id="toast-inner" class="flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl bg-slate-900 text-white text-xs font-semibold border border-slate-700">
+        <span id="toast-icon" class="text-base">✅</span>
+        <span id="toast-msg" class="flex-1">Pesan notifikasi</span>
+      </div>
+    </div>
+
     <!-- TOP HEADER -->
     <header class="sticky top-0 z-30 bg-white/80 dark:bg-darkbg/80 backdrop-blur-md px-4 py-3.5 border-b border-slate-200/80 dark:border-darkborder/50 flex items-center justify-between">
       <div class="flex items-center gap-2">
@@ -291,8 +302,16 @@
       <!-- ============================================== -->
       <section id="view-history" class="hidden space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="text-base font-extrabold">Riwayat Keuangan</h2>
-          <input type="month" id="filter-history-month" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-darkcard border border-slate-200 dark:border-darkborder text-slate-700 dark:text-slate-200 outline-none">
+          <div>
+            <h2 class="text-base font-extrabold">Riwayat Keuangan</h2>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">Semua catatan mutasi dompet</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="exportToCSV()" title="Unduh CSV" class="p-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-darkcard text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-darkborder hover:bg-slate-200 active:scale-95 transition-all">
+              <i class="ph-bold ph-download-simple text-base"></i>
+            </button>
+            <input type="month" id="filter-history-month" class="px-2 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-darkcard border border-slate-200 dark:border-darkborder text-slate-700 dark:text-slate-200 outline-none">
+          </div>
         </div>
 
         <!-- Filter Chips (Type) -->
@@ -320,12 +339,37 @@
       <!-- ============================================== -->
       <section id="view-analytics" class="hidden space-y-4">
         <div>
-          <h2 class="text-base font-extrabold">Batas Anggaran Kategori</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Pantau batas belanja mingguan & bulanan Anda</p>
+          <h2 class="text-base font-extrabold">Analitik & Anggaran</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Distribusi pengeluaran dan batas belanja kategori</p>
         </div>
 
-        <div id="budgets-category-list" class="space-y-3">
-          <!-- Rendered dynamically -->
+        <!-- DONUT CHART CARD -->
+        <div class="p-4 rounded-2xl bg-white dark:bg-darkcard border border-slate-200/80 dark:border-darkborder/50 shadow-sm space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+              <i class="ph-bold ph-chart-donut text-blue-500 text-base"></i>
+              Proporsi Pengeluaran Kategori
+            </h3>
+            <span class="text-[10px] text-slate-400" id="chart-month-lbl">Bulan Ini</span>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="relative flex justify-center items-center py-2 h-52">
+            <canvas id="chart-donut-categories"></canvas>
+          </div>
+        </div>
+
+        <!-- BUDGET CATEGORIES LIST -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Batas Anggaran Kategori</h3>
+            <button onclick="openSetBudgetModal()" class="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 active:scale-95">
+              <i class="ph-bold ph-plus-circle"></i> Atur Budget
+            </button>
+          </div>
+          <div id="budgets-category-list" class="space-y-3">
+            <!-- Rendered dynamically -->
+          </div>
         </div>
       </section>
 
@@ -338,7 +382,7 @@
             <h2 class="text-base font-extrabold">Tagihan & Langganan</h2>
             <p class="text-xs text-slate-500 dark:text-slate-400">Daftar beban rutin setiap bulan</p>
           </div>
-          <button onclick="alert('Fitur tambah tagihan baru dapat dilakukan di Google Sheet tab RecurringBills')" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white flex items-center gap-1 active:scale-95">
+          <button onclick="openAddBillModal()" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white flex items-center gap-1 active:scale-95">
             <i class="ph-bold ph-plus"></i> Baru
           </button>
         </div>
@@ -549,6 +593,137 @@
           <i class="ph-bold ph-check"></i> Proses Transfer
         </button>
 
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 3: EDIT TRANSACTION -->
+    <!-- ============================================== -->
+    <div id="modal-edit-tx" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-end justify-center">
+      <div class="w-full max-w-md bg-white dark:bg-darkcard rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 dark:border-darkborder space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-darkborder/50">
+          <h3 class="text-sm font-extrabold flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+            <i class="ph-bold ph-pencil-simple text-lg"></i> Edit Transaksi
+          </h3>
+          <button onclick="closeEditModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <i class="ph-bold ph-x text-lg"></i>
+          </button>
+        </div>
+
+        <input type="hidden" id="edit-tx-id">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tanggal</label>
+            <input type="date" id="edit-tx-date" class="w-full p-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Dompet</label>
+            <select id="edit-tx-wallet" class="w-full p-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none"></select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Nominal (Rp)</label>
+          <input type="number" id="edit-tx-amount" class="w-full p-2.5 text-base font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Kategori</label>
+          <select id="edit-tx-category" class="w-full p-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none"></select>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Catatan</label>
+          <input type="text" id="edit-tx-notes" class="w-full p-2.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+        </div>
+
+        <button onclick="submitEditTransaction()" class="w-full py-3.5 rounded-xl bg-blue-600 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+          <i class="ph-bold ph-check"></i> Simpan Perubahan
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 4: TAMBAH TAGIHAN RUTIN -->
+    <!-- ============================================== -->
+    <div id="modal-add-bill" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-end justify-center">
+      <div class="w-full max-w-md bg-white dark:bg-darkcard rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 dark:border-darkborder space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-darkborder/50">
+          <h3 class="text-sm font-extrabold flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+            <i class="ph-bold ph-bell-simple-plus text-lg"></i> Tambah Tagihan Rutin
+          </h3>
+          <button onclick="closeAddBillModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <i class="ph-bold ph-x text-lg"></i>
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Nama Tagihan / Langganan</label>
+          <input type="text" id="bill-input-name" placeholder="Misal: Netflix / WiFi Kos" class="w-full p-2.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Nominal (Rp)</label>
+            <input type="number" id="bill-input-amount" placeholder="0" class="w-full p-2.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tgl Jatuh Tempo (1-31)</label>
+            <input type="number" id="bill-input-day" min="1" max="31" placeholder="10" class="w-full p-2.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Kategori</label>
+            <select id="bill-select-category" class="w-full p-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Dompet Default</label>
+            <select id="bill-select-wallet" class="w-full p-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none"></select>
+          </div>
+        </div>
+
+        <button onclick="submitNewBill()" class="w-full py-3.5 rounded-xl bg-blue-600 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+          <i class="ph-bold ph-plus"></i> Simpan Tagihan
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 5: ATUR BATAS BUDGET KATEGORI -->
+    <!-- ============================================== -->
+    <div id="modal-set-budget" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-end justify-center">
+      <div class="w-full max-w-md bg-white dark:bg-darkcard rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 dark:border-darkborder space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-darkborder/50">
+          <h3 class="text-sm font-extrabold flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+            <i class="ph-bold ph-sliders-horizontal text-lg"></i> Atur Batas Budget Kategori
+          </h3>
+          <button onclick="closeSetBudgetModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <i class="ph-bold ph-x text-lg"></i>
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Pilih Kategori</label>
+          <select id="budget-select-category" class="w-full p-2.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none"></select>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Batas Bulanan (Rp)</label>
+          <input type="number" id="budget-input-monthly" placeholder="1500000" class="w-full p-2.5 text-sm font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Batas Mingguan (Rp)</label>
+          <input type="number" id="budget-input-weekly" placeholder="375000" class="w-full p-2.5 text-sm font-extrabold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-darkborder text-slate-800 dark:text-slate-200 outline-none">
+          <p class="text-[10px] text-slate-400 mt-1">Kosongkan untuk otomatis mengisi 1/4 dari batas bulanan.</p>
+        </div>
+
+        <button onclick="submitSaveBudget()" class="w-full py-3.5 rounded-xl bg-blue-600 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+          <i class="ph-bold ph-check"></i> Terapkan Budget
+        </button>
       </div>
     </div>
 

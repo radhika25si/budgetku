@@ -1,6 +1,6 @@
 /**
  * ===================================================================
- * BUDGETKU - CLIENT JAVASCRIPT APPLICATION CORE
+ * BUDGETKU - CLIENT JAVASCRIPT APPLICATION CORE (v1.1)
  * ===================================================================
  */
 
@@ -9,11 +9,12 @@ const STORAGE_KEYS = {
   GAS_URL: 'budgetku_gas_url',
   THEME: 'budgetku_theme',
   MASKED: 'budgetku_is_masked',
-  CACHE_DATA: 'budgetku_cached_data',
-  PENDING_SYNC: 'budgetku_pending_sync'
+  CACHE_DATA: 'budgetku_cached_data'
 };
 
-// State Aplikasi
+let categoryChart = null;
+let toastTimeout = null;
+
 let state = {
   gasUrl: localStorage.getItem(STORAGE_KEYS.GAS_URL) || '',
   theme: localStorage.getItem(STORAGE_KEYS.THEME) || 'dark',
@@ -25,7 +26,6 @@ let state = {
   addModalType: 'Expense',
   selectedCategoryId: '',
   
-  // Data utama
   data: {
     netWorth: 3250000,
     monthIncome: 5000000,
@@ -77,7 +77,6 @@ let state = {
 
 // 2. INITIALIZATION
 document.addEventListener('DOMContentLoaded', () => {
-  // PWA Service Worker Registration
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
@@ -86,14 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initEyeMask();
   initGasUrlInput();
   
-  // Set default filter month
   const monthInput = document.getElementById('filter-history-month');
   if (monthInput) monthInput.value = state.currentMonth;
 
   const addDateInput = document.getElementById('input-add-date');
   if (addDateInput) addDateInput.value = new Date().toISOString().substring(0, 10);
 
-  // Ambil cache data lokal jika ada
   const cached = localStorage.getItem(STORAGE_KEYS.CACHE_DATA);
   if (cached) {
     try {
@@ -101,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   }
 
-  // Setup Event Listeners
   document.getElementById('btn-toggle-theme').addEventListener('click', toggleTheme);
   document.getElementById('btn-toggle-eye').addEventListener('click', toggleEye);
   
@@ -120,16 +116,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Render awal
   renderAll();
 
-  // Jika URL GAS ada, muat data dari Google Sheets secara live
   if (state.gasUrl) {
     fetchDashboard();
   }
 });
 
-// 3. THEME & EYE MASK MANAGERS
+// 3. TOAST NOTIFICATION SYSTEM
+function showToast(message, type = 'success') {
+  const box = document.getElementById('toast-box');
+  const inner = document.getElementById('toast-inner');
+  const icon = document.getElementById('toast-icon');
+  const msg = document.getElementById('toast-msg');
+
+  if (!box) return;
+
+  msg.innerText = message;
+  if (type === 'success') {
+    icon.innerText = '✅';
+    inner.className = 'flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl bg-slate-900 text-white text-xs font-semibold border border-emerald-500/50';
+  } else if (type === 'error') {
+    icon.innerText = '⚠️';
+    inner.className = 'flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl bg-slate-900 text-white text-xs font-semibold border border-rose-500/50';
+  } else {
+    icon.innerText = 'ℹ️';
+    inner.className = 'flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl bg-slate-900 text-white text-xs font-semibold border border-blue-500/50';
+  }
+
+  box.classList.remove('opacity-0', '-translate-y-4');
+  box.classList.add('opacity-100', 'translate-y-0');
+
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    box.classList.remove('opacity-100', 'translate-y-0');
+    box.classList.add('opacity-0', '-translate-y-4');
+  }, 2800);
+}
+
+// 4. THEME & EYE MASK
 function initTheme() {
   if (state.theme === 'dark') {
     document.documentElement.classList.add('dark');
@@ -144,6 +169,9 @@ function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem(STORAGE_KEYS.THEME, state.theme);
   initTheme();
+  if (state.currentTab === 'analytics') {
+    renderCategoryChart();
+  }
 }
 
 function initEyeMask() {
@@ -181,14 +209,14 @@ function updateStatusBadge() {
   const txt = document.getElementById('txt-conn-status');
   if (state.gasUrl) {
     badge.className = 'flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40';
-    txt.innerText = 'Google Sheets Connected';
+    txt.innerText = 'Sheets Connected';
   } else {
     badge.className = 'flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40';
     txt.innerText = 'Demo Mode';
   }
 }
 
-// 4. API GOOGLE APPS SCRIPT SYNC
+// 5. API GOOGLE APPS SCRIPT
 async function fetchDashboard() {
   if (!state.gasUrl) return;
 
@@ -202,7 +230,7 @@ async function fetchDashboard() {
       renderAll();
     }
   } catch (err) {
-    console.warn('Gagal memuat dari Google Sheets, menggunakan cache lokal:', err);
+    console.warn('Gagal memuat dari Google Sheets:', err);
   } finally {
     updateLoading(false);
   }
@@ -210,7 +238,6 @@ async function fetchDashboard() {
 
 async function postToGas(action, payload) {
   if (!state.gasUrl) {
-    // Simulasi offline/demo
     return { success: true, message: 'Disimpan di mode demo lokal' };
   }
 
@@ -221,8 +248,7 @@ async function postToGas(action, payload) {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: action, ...payload })
     });
-    const result = await res.json();
-    return result;
+    return await res.json();
   } catch (err) {
     console.error('Error POST GAS:', err);
     throw err;
@@ -241,7 +267,7 @@ function updateLoading(isLoading) {
   }
 }
 
-// 5. VIEW NAVIGATION (TABS)
+// 6. VIEW NAVIGATION (TABS)
 function switchTab(tabName) {
   state.currentTab = tabName;
 
@@ -249,15 +275,11 @@ function switchTab(tabName) {
   tabs.forEach(t => {
     const view = document.getElementById(`view-${t}`);
     if (view) {
-      if (t === tabName) {
-        view.classList.remove('hidden');
-      } else {
-        view.classList.add('hidden');
-      }
+      if (t === tabName) view.classList.remove('hidden');
+      else view.classList.add('hidden');
     }
   });
 
-  // Update Nav button styles
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const target = btn.getAttribute('data-tab');
     if (target === tabName) {
@@ -267,19 +289,24 @@ function switchTab(tabName) {
     }
   });
 
-  // Trigger spesifik per tab
   if (tabName === 'history') renderHistory();
-  if (tabName === 'analytics') renderBudgets();
+  if (tabName === 'analytics') {
+    renderBudgets();
+    renderCategoryChart();
+  }
   if (tabName === 'bills') renderBills();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 6. RENDER LOGIC
+// 7. RENDER LOGIC
 function renderAll() {
   renderHome();
   renderHistory();
   renderBudgets();
   renderBills();
+  if (state.currentTab === 'analytics') {
+    renderCategoryChart();
+  }
 }
 
 function formatRupiah(num) {
@@ -290,7 +317,6 @@ function formatRupiah(num) {
 function renderHome() {
   const d = state.data;
   
-  // Net Worth Card
   const elNetWorth = document.getElementById('val-net-worth');
   if (elNetWorth) elNetWorth.innerText = state.isMasked ? 'Rp •••••••' : formatRupiah(d.netWorth);
 
@@ -300,7 +326,6 @@ function renderHome() {
   const elMonthExpense = document.getElementById('val-month-expense');
   if (elMonthExpense) elMonthExpense.innerText = state.isMasked ? 'Rp •••••••' : '-' + formatRupiah(d.monthExpense);
 
-  // Wallets Carousel
   const elWallets = document.getElementById('wallets-carousel');
   if (elWallets) {
     elWallets.innerHTML = d.wallets.map(w => `
@@ -408,7 +433,6 @@ function renderHome() {
 function renderTxItem(t) {
   const isExp = t.type === 'Expense';
   const isInc = t.type === 'Income';
-  const isTrf = t.type === 'Transfer';
 
   const badgeColor = isExp ? 'text-rose-600 dark:text-rose-400' : isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400';
   const prefix = isExp ? '-' : isInc ? '+' : '';
@@ -427,9 +451,15 @@ function renderTxItem(t) {
       </div>
       <div class="text-right">
         <p class="text-xs font-extrabold ${badgeColor} masked-value">${prefix}${formatRupiah(t.amount)}</p>
-        <button onclick="deleteTx('${t.id}')" class="text-[10px] text-slate-400 hover:text-rose-500 transition-colors">
-          Hapus
-        </button>
+        <div class="flex items-center justify-end gap-2 mt-0.5">
+          <button onclick="openEditModal('${t.id}')" class="text-[10px] font-semibold text-blue-500 hover:underline">
+            Edit
+          </button>
+          <span class="text-slate-300 dark:text-slate-700 text-[10px]">&bull;</span>
+          <button onclick="deleteTx('${t.id}')" class="text-[10px] font-semibold text-slate-400 hover:text-rose-500 transition-colors">
+            Hapus
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -472,6 +502,96 @@ function setHistoryFilter(type) {
   renderHistory();
 }
 
+function exportToCSV() {
+  const txs = state.data.recentTransactions || [];
+  if (txs.length === 0) {
+    showToast('Tidak ada transaksi untuk diekspor', 'error');
+    return;
+  }
+
+  const headers = ['ID', 'Tanggal', 'Tipe', 'Nominal', 'Kategori', 'Grup 50/30/20', 'Dompet Asal', 'Dompet Tujuan', 'Catatan'];
+  const rows = txs.map(t => [
+    t.id,
+    t.date,
+    t.type,
+    t.amount,
+    `"${(t.category || '').replace(/"/g, '""')}"`,
+    `"${(t.macro_type || '').replace(/"/g, '""')}"`,
+    `"${(t.wallet_from || '').replace(/"/g, '""')}"`,
+    `"${(t.wallet_to || '').replace(/"/g, '""')}"`,
+    `"${(t.notes || '').replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `BudgetKu_Transaksi_${state.currentMonth}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showToast('File CSV berhasil diunduh!');
+}
+
+// 8. DONUT CHART FOR ANALYTICS
+function renderCategoryChart() {
+  const canvas = document.getElementById('chart-donut-categories');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const expenses = state.data.recentTransactions.filter(t => t.type === 'Expense');
+  const catTotals = {};
+
+  expenses.forEach(e => {
+    const cat = e.category || 'Lainnya';
+    catTotals[cat] = (catTotals[cat] || 0) + Number(e.amount);
+  });
+
+  const labels = Object.keys(catTotals);
+  const data = Object.values(catTotals);
+
+  if (labels.length === 0) {
+    labels.push('Makanan & Minuman', 'Transportasi', 'Hiburan');
+    data.push(750000, 200000, 450000);
+  }
+
+  const colors = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#64748B'];
+
+  if (categoryChart) {
+    categoryChart.destroy();
+  }
+
+  const isDark = document.documentElement.classList.contains('dark');
+
+  categoryChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 0,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            boxWidth: 12,
+            font: { size: 10, family: '"Plus Jakarta Sans"' },
+            color: isDark ? '#94A3B8' : '#475569'
+          }
+        }
+      },
+      cutout: '70%'
+    }
+  });
+}
+
 function renderBudgets() {
   const container = document.getElementById('budgets-category-list');
   if (!container) return;
@@ -502,7 +622,7 @@ function renderBudgets() {
 
         <div class="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400">
           <span>Terpakai: <b class="text-slate-800 dark:text-slate-200">${formatRupiah(b.spent_month)}</b></span>
-          <span>Batas: <b>${formatRupiah(b.monthly_limit)}</b></span>
+          <span>Bulan: <b>${formatRupiah(b.monthly_limit)}</b> (Minggu: ${formatRupiah(b.weekly_limit)})</span>
         </div>
       </div>
     `;
@@ -540,12 +660,11 @@ function renderBills() {
   `).join('');
 }
 
-// 7. MODAL ADD LOGIC
+// 9. QUICK ADD TRANSACTION
 function openAddModal() {
   const modal = document.getElementById('modal-add');
   modal.classList.remove('hidden');
 
-  // Populate wallets
   const selectWallet = document.getElementById('select-add-wallet');
   selectWallet.innerHTML = state.data.wallets.map(w => `
     <option value="${w.wallet_name}">${w.icon || '💼'} ${w.wallet_name}</option>
@@ -572,7 +691,6 @@ function setAddType(type) {
     btnInc.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white';
   }
 
-  // Populate categories grid
   const grid = document.getElementById('grid-add-categories');
   const filteredCats = state.data.categories.filter(c => c.type === type);
   
@@ -612,7 +730,7 @@ function resetAmount() {
 async function submitTransaction() {
   const amount = Number(document.getElementById('input-add-amount').value);
   if (!amount || amount <= 0) {
-    alert('Masukkan nominal transaksi yang valid!');
+    showToast('Masukkan nominal yang valid!', 'error');
     return;
   }
 
@@ -639,7 +757,6 @@ async function submitTransaction() {
     user_id: 'user_primary'
   };
 
-  // Update State Lokal
   state.data.recentTransactions.unshift(txData);
   if (state.addModalType === 'Expense') {
     state.data.netWorth -= amount;
@@ -653,7 +770,6 @@ async function submitTransaction() {
     state.data.monthIncome += amount;
   }
 
-  // Update saldo wallet
   const targetWallet = state.data.wallets.find(w => w.wallet_name === wallet);
   if (targetWallet) {
     if (state.addModalType === 'Expense') targetWallet.current_balance -= amount;
@@ -662,16 +778,72 @@ async function submitTransaction() {
 
   closeAddModal();
   renderAll();
+  showToast('Transaksi berhasil disimpan!');
 
-  // Kirim ke Google Apps Script di background
   try {
     await postToGas('addTransaction', { data: txData });
-  } catch(e) {
-    console.log('Tersimpan di offline cache');
-  }
+  } catch(e) {}
 }
 
-// 8. MODAL TRANSFER LOGIC
+// 10. EDIT TRANSACTION
+function openEditModal(id) {
+  const tx = state.data.recentTransactions.find(t => t.id === id);
+  if (!tx) return;
+
+  document.getElementById('edit-tx-id').value = tx.id;
+  document.getElementById('edit-tx-date').value = tx.date;
+  document.getElementById('edit-tx-amount').value = tx.amount;
+  document.getElementById('edit-tx-notes').value = tx.notes || '';
+
+  const wSel = document.getElementById('edit-tx-wallet');
+  wSel.innerHTML = state.data.wallets.map(w => `
+    <option value="${w.wallet_name}" ${w.wallet_name === tx.wallet_from ? 'selected' : ''}>${w.icon || '💼'} ${w.wallet_name}</option>
+  `).join('');
+
+  const cSel = document.getElementById('edit-tx-category');
+  cSel.innerHTML = state.data.categories.map(c => `
+    <option value="${c.category_name}" ${c.category_name === tx.category ? 'selected' : ''}>${c.icon || '🏷️'} ${c.category_name}</option>
+  `).join('');
+
+  document.getElementById('modal-edit-tx').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('modal-edit-tx').classList.add('hidden');
+}
+
+async function submitEditTransaction() {
+  const id = document.getElementById('edit-tx-id').value;
+  const date = document.getElementById('edit-tx-date').value;
+  const amount = Number(document.getElementById('edit-tx-amount').value);
+  const wallet = document.getElementById('edit-tx-wallet').value;
+  const category = document.getElementById('edit-tx-category').value;
+  const notes = document.getElementById('edit-tx-notes').value;
+
+  if (!amount || amount <= 0) {
+    showToast('Nominal harus lebih dari 0', 'error');
+    return;
+  }
+
+  const tx = state.data.recentTransactions.find(t => t.id === id);
+  if (tx) {
+    tx.date = date;
+    tx.amount = amount;
+    tx.wallet_from = wallet;
+    tx.category = category;
+    tx.notes = notes;
+  }
+
+  closeEditModal();
+  renderAll();
+  showToast('Transaksi berhasil diperbarui!');
+
+  try {
+    await postToGas('editTransaction', { id: id, data: { date, amount, wallet_from: wallet, category, notes } });
+  } catch(e) {}
+}
+
+// 11. TRANSFER ANTAR DOMPET
 function openTransferModal() {
   const modal = document.getElementById('modal-transfer');
   modal.classList.remove('hidden');
@@ -698,12 +870,12 @@ async function submitTransfer() {
   const notes = document.getElementById('input-transfer-notes').value || 'Pindah Saldo';
 
   if (!amount || amount <= 0) {
-    alert('Masukkan nominal transfer yang valid!');
+    showToast('Masukkan nominal transfer!', 'error');
     return;
   }
 
   if (from === to) {
-    alert('Dompet asal dan tujuan tidak boleh sama!');
+    showToast('Dompet asal dan tujuan tidak boleh sama!', 'error');
     return;
   }
 
@@ -720,7 +892,6 @@ async function submitTransfer() {
     user_id: 'user_primary'
   };
 
-  // Mutasi dompet lokal
   const wFrom = state.data.wallets.find(w => w.wallet_name === from);
   const wTo = state.data.wallets.find(w => w.wallet_name === to);
   if (wFrom) wFrom.current_balance -= amount;
@@ -730,22 +901,64 @@ async function submitTransfer() {
 
   closeTransferModal();
   renderAll();
+  showToast(`Pindah saldo ${formatRupiah(amount)} sukses!`);
 
   try {
     await postToGas('transferFunds', { data: txData });
-  } catch(e) {
-    console.log('Tersimpan di offline cache');
-  }
+  } catch(e) {}
 }
 
-// 9. RECURRING BILLS DIRECT PAYMENT
+// 12. TAGIHAN RUTIN (BILLS)
+function openAddBillModal() {
+  const modal = document.getElementById('modal-add-bill');
+  modal.classList.remove('hidden');
+
+  const cSel = document.getElementById('bill-select-category');
+  cSel.innerHTML = state.data.categories.filter(c => c.type === 'Expense').map(c => `
+    <option value="${c.category_name}">${c.icon || '🏷️'} ${c.category_name}</option>
+  `).join('');
+
+  const wSel = document.getElementById('bill-select-wallet');
+  wSel.innerHTML = state.data.wallets.map(w => `
+    <option value="${w.wallet_name}">${w.icon || '💼'} ${w.wallet_name}</option>
+  `).join('');
+}
+
+function closeAddBillModal() {
+  document.getElementById('modal-add-bill').classList.add('hidden');
+}
+
+function submitNewBill() {
+  const name = document.getElementById('bill-input-name').value.trim();
+  const amount = Number(document.getElementById('bill-input-amount').value);
+  const dueDay = Number(document.getElementById('bill-input-day').value) || 1;
+  const category = document.getElementById('bill-select-category').value;
+  const wallet = document.getElementById('bill-select-wallet').value;
+
+  if (!name || !amount) {
+    showToast('Lengkapi nama dan nominal tagihan!', 'error');
+    return;
+  }
+
+  const newBill = {
+    bill_id: 'BILL-' + Date.now(),
+    bill_name: name,
+    amount: amount,
+    due_day: dueDay,
+    category: category,
+    wallet_default: wallet,
+    is_active: true
+  };
+
+  state.data.recurringBills.push(newBill);
+  closeAddBillModal();
+  renderBills();
+  showToast(`Tagihan "${name}" berhasil ditambahkan!`);
+}
+
 async function payBillDirect(billId) {
   const bill = state.data.recurringBills.find(b => b.bill_id === billId);
   if (!bill) return;
-
-  if (!confirm(`Konfirmasi pembayaran tagihan "${bill.bill_name}" sebesar ${formatRupiah(bill.amount)} menggunakan dompet ${bill.wallet_default}?`)) {
-    return;
-  }
 
   const txData = {
     id: 'TX-BILL-' + Date.now(),
@@ -769,30 +982,83 @@ async function payBillDirect(billId) {
   if (w) w.current_balance -= bill.amount;
 
   renderAll();
-  alert(`Tagihan "${bill.bill_name}" berhasil dibukukan!`);
+  showToast(`Tagihan "${bill.bill_name}" lunas dibayar!`);
 
   try {
     await postToGas('payRecurringBill', { billId: bill.bill_id, date: txData.date, wallet: bill.wallet_default });
   } catch(e) {}
 }
 
-// 10. DELETE TRANSACTION
+// 13. SET BUDGET KATEGORI
+function openSetBudgetModal() {
+  const modal = document.getElementById('modal-set-budget');
+  modal.classList.remove('hidden');
+
+  const cSel = document.getElementById('budget-select-category');
+  cSel.innerHTML = state.data.categories.filter(c => c.type === 'Expense').map(c => `
+    <option value="${c.category_name}">${c.icon || '🏷️'} ${c.category_name}</option>
+  `).join('');
+}
+
+function closeSetBudgetModal() {
+  document.getElementById('modal-set-budget').classList.add('hidden');
+}
+
+async function submitSaveBudget() {
+  const category = document.getElementById('budget-select-category').value;
+  const monthly = Number(document.getElementById('budget-input-monthly').value);
+  let weekly = Number(document.getElementById('budget-input-weekly').value);
+
+  if (!monthly || monthly <= 0) {
+    showToast('Masukkan batas bulanan yang valid!', 'error');
+    return;
+  }
+
+  if (!weekly || weekly <= 0) {
+    weekly = Math.round(monthly / 4);
+  }
+
+  let existing = state.data.budgets.find(b => b.category_name === category);
+  if (existing) {
+    existing.monthly_limit = monthly;
+    existing.weekly_limit = weekly;
+  } else {
+    state.data.budgets.push({
+      category_name: category,
+      monthly_limit: monthly,
+      weekly_limit: weekly,
+      spent_month: 0,
+      percent_spent: 0
+    });
+  }
+
+  closeSetBudgetModal();
+  renderBudgets();
+  showToast(`Budget "${category}" berhasil diatur!`);
+
+  try {
+    await postToGas('saveBudget', { data: { category_name: category, monthly_limit: monthly, weekly_limit: weekly } });
+  } catch(e) {}
+}
+
+// 14. DELETE TRANSACTION
 async function deleteTx(id) {
   if (!confirm('Hapus transaksi ini?')) return;
 
   state.data.recentTransactions = state.data.recentTransactions.filter(t => t.id !== id);
   renderAll();
+  showToast('Transaksi dihapus!');
 
   try {
     await postToGas('deleteTransaction', { id: id });
   } catch(e) {}
 }
 
-// 11. SETTINGS & GAS CONNECTION TEST
+// 15. SETTINGS & GAS CONNECTION TEST
 async function saveAndTestGasUrl() {
   const url = document.getElementById('input-gas-url').value.trim();
   if (!url) {
-    alert('Masukkan URL Google Apps Script yang valid!');
+    showToast('Masukkan URL Apps Script!', 'error');
     return;
   }
 
@@ -804,7 +1070,7 @@ async function saveAndTestGasUrl() {
       state.gasUrl = url;
       localStorage.setItem(STORAGE_KEYS.GAS_URL, url);
       updateStatusBadge();
-      alert('Koneksi ke Google Sheets BERHASIL! Data Anda kini tersinkronisasi langsung.');
+      showToast('Koneksi ke Google Sheets BERHASIL!');
       fetchDashboard();
     } else {
       throw new Error(json.error || 'Respon Apps Script tidak valid');
