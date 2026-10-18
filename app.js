@@ -27,17 +27,17 @@ let state = {
   selectedCategoryId: '',
   
   data: {
-    netWorth: 3250000,
-    monthIncome: 5000000,
-    monthExpense: 1750000,
-    monthSavings: 3250000,
-    weeklyExpense: 320000,
+    netWorth: 0,
+    monthIncome: 0,
+    monthExpense: 0,
+    monthSavings: 0,
+    weeklyExpense: 0,
     currentWeekRange: { start: '2026-10-12', end: '2026-10-18' },
     wallets: [
-      { wallet_name: 'Tunai', current_balance: 500000, icon: '💵', color: '#10B981' },
-      { wallet_name: 'BCA', current_balance: 2500000, icon: '🏦', color: '#3B82F6' },
-      { wallet_name: 'GoPay', current_balance: 150000, icon: '📱', color: '#06B6D4' },
-      { wallet_name: 'ShopeePay', current_balance: 100000, icon: '🛍️', color: '#F97316' }
+      { wallet_name: 'Tunai', current_balance: 0, icon: '💵', color: '#10B981' },
+      { wallet_name: 'BCA', current_balance: 0, icon: '🏦', color: '#3B82F6' },
+      { wallet_name: 'GoPay', current_balance: 0, icon: '📱', color: '#06B6D4' },
+      { wallet_name: 'ShopeePay', current_balance: 0, icon: '🛍️', color: '#F97316' }
     ],
     categories: [
       { category_id: 'CAT-01', category_name: 'Makanan & Minuman', type: 'Expense', macro_group: 'Needs', icon: '🍔' },
@@ -51,27 +51,21 @@ let state = {
       { category_id: 'CAT-09', category_name: 'Freelance & Bonus', type: 'Income', macro_group: 'None', icon: '🎁' }
     ],
     macroBreakdown: {
-      needs: 1150000,
-      wants: 450000,
-      savings: 150000
+      needs: 0,
+      wants: 0,
+      savings: 0
     },
     budgets: [
-      { category_name: 'Makanan & Minuman', monthly_limit: 1500000, weekly_limit: 375000, spent_month: 750000, percent_spent: 50 },
-      { category_name: 'Transportasi & Bensin', monthly_limit: 400000, weekly_limit: 100000, spent_month: 200000, percent_spent: 50 },
-      { category_name: 'Hiburan & Jajan', monthly_limit: 500000, weekly_limit: 125000, spent_month: 450000, percent_spent: 90 }
+      { category_name: 'Makanan & Minuman', monthly_limit: 1500000, weekly_limit: 375000, spent_month: 0, percent_spent: 0 },
+      { category_name: 'Transportasi & Bensin', monthly_limit: 400000, weekly_limit: 100000, spent_month: 0, percent_spent: 0 },
+      { category_name: 'Hiburan & Jajan', monthly_limit: 500000, weekly_limit: 125000, spent_month: 0, percent_spent: 0 }
     ],
     recurringBills: [
       { bill_id: 'BILL-01', bill_name: 'WiFi Indihome', amount: 350000, due_day: 10, category: 'Tagihan & Utilitas', wallet_default: 'BCA', is_active: true },
       { bill_id: 'BILL-02', bill_name: 'Spotify & Netflix', amount: 55000, due_day: 15, category: 'Hiburan & Jajan', wallet_default: 'GoPay', is_active: true },
       { bill_id: 'BILL-03', bill_name: 'Listrik Token PLN', amount: 200000, due_day: 20, category: 'Tagihan & Utilitas', wallet_default: 'BCA', is_active: true }
     ],
-    recentTransactions: [
-      { id: 'TX-01', date: '2026-10-18', type: 'Expense', amount: 35000, category: 'Makanan & Minuman', macro_type: 'Needs (50%)', wallet_from: 'GoPay', notes: 'Makan siang ayam geprek' },
-      { id: 'TX-02', date: '2026-10-17', type: 'Expense', amount: 25000, category: 'Transportasi & Bensin', macro_type: 'Needs (50%)', wallet_from: 'Tunai', notes: 'Bensin Pertamax' },
-      { id: 'TX-03', date: '2026-10-16', type: 'Expense', amount: 45000, category: 'Hiburan & Jajan', macro_type: 'Wants (30%)', wallet_from: 'GoPay', notes: 'Kopi Kenangan' },
-      { id: 'TX-04', date: '2026-10-15', type: 'Transfer', amount: 200000, category: 'Transfer Antar Dompet', macro_type: 'None', wallet_from: 'BCA', wallet_to: 'GoPay', notes: 'Top up GoPay' },
-      { id: 'TX-05', date: '2026-10-01', type: 'Income', amount: 5000000, category: 'Gaji Pokok', macro_type: 'None', wallet_from: 'BCA', notes: 'Gaji Bulanan' }
-    ]
+    recentTransactions: []
   }
 };
 
@@ -329,10 +323,10 @@ function renderHome() {
   const elWallets = document.getElementById('wallets-carousel');
   if (elWallets) {
     elWallets.innerHTML = d.wallets.map(w => `
-      <div class="flex-shrink-0 w-36 p-3 rounded-2xl bg-white dark:bg-darkcard border border-slate-200/80 dark:border-darkborder/50 shadow-sm">
+      <div onclick="openEditWalletModal('${w.wallet_name}', ${w.current_balance})" class="flex-shrink-0 w-36 p-3 rounded-2xl bg-white dark:bg-darkcard border border-slate-200/80 dark:border-darkborder/50 shadow-sm cursor-pointer active:scale-95 transition-all hover:border-emerald-500">
         <div class="flex items-center justify-between mb-1.5">
           <span class="text-xl">${w.icon || '💼'}</span>
-          <span class="w-2 h-2 rounded-full" style="background-color: ${w.color || '#3B82F6'}"></span>
+          <span class="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-0.5"><i class="ph-bold ph-pencil-simple"></i> Ubah</span>
         </div>
         <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">${w.wallet_name}</p>
         <p class="text-xs font-bold text-slate-800 dark:text-slate-100 masked-value truncate">
@@ -1088,4 +1082,94 @@ function resetToDemoData() {
   localStorage.removeItem(STORAGE_KEYS.CACHE_DATA);
   state.gasUrl = '';
   location.reload();
+}
+
+// 16. KELOLA SALDO DOMPET & RESET DATA KE 0
+function openEditWalletModal(targetName, currentBal) {
+  const modal = document.getElementById('modal-edit-wallet');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const sel = document.getElementById('wallet-select-target');
+  sel.innerHTML = state.data.wallets.map(w => `
+    <option value="${w.wallet_name}" ${w.wallet_name === targetName ? 'selected' : ''}>${w.icon || '💼'} ${w.wallet_name}</option>
+  `).join('');
+
+  onWalletTargetChange();
+  if (currentBal !== undefined) {
+    document.getElementById('wallet-input-balance').value = currentBal;
+  }
+}
+
+function closeEditWalletModal() {
+  const modal = document.getElementById('modal-edit-wallet');
+  if (modal) modal.classList.add('hidden');
+}
+
+function onWalletTargetChange() {
+  const sel = document.getElementById('wallet-select-target');
+  const input = document.getElementById('wallet-input-balance');
+  if (!sel || !input) return;
+
+  const w = state.data.wallets.find(wal => wal.wallet_name === sel.value);
+  if (w) {
+    input.value = w.current_balance || 0;
+  }
+}
+
+async function submitEditWallet() {
+  const sel = document.getElementById('wallet-select-target');
+  const input = document.getElementById('wallet-input-balance');
+  const walletName = sel.value;
+  const newBal = Number(input.value) || 0;
+
+  const targetWallet = state.data.wallets.find(w => w.wallet_name === walletName);
+  if (targetWallet) {
+    targetWallet.current_balance = newBal;
+  }
+
+  // Hitung ulang Net Worth
+  state.data.netWorth = state.data.wallets.reduce((acc, curr) => acc + (Number(curr.current_balance) || 0), 0);
+
+  localStorage.setItem(STORAGE_KEYS.CACHE_DATA, JSON.stringify(state.data));
+  closeEditWalletModal();
+  renderAll();
+  showToast(`Saldo ${walletName} berhasil diatur ke ${formatRupiah(newBal)}!`);
+
+  try {
+    await postToGas('updateWalletBalance', { data: { wallet_name: walletName, new_balance: newBal } });
+  } catch(e) {}
+}
+
+async function resetAllDataToZero() {
+  if (!confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan semua riwayat transaksi dan menyetel semua saldo dompet menjadi Rp 0?')) {
+    return;
+  }
+
+  // 1. Reset state lokal
+  state.data.netWorth = 0;
+  state.data.monthIncome = 0;
+  state.data.monthExpense = 0;
+  state.data.monthSavings = 0;
+  state.data.weeklyExpense = 0;
+  state.data.macroBreakdown = { needs: 0, wants: 0, savings: 0 };
+  state.data.recentTransactions = [];
+
+  state.data.wallets.forEach(w => {
+    w.current_balance = 0;
+  });
+
+  state.data.budgets.forEach(b => {
+    b.spent_month = 0;
+    b.percent_spent = 0;
+  });
+
+  localStorage.setItem(STORAGE_KEYS.CACHE_DATA, JSON.stringify(state.data));
+  renderAll();
+  showToast('Semua transaksi & saldo telah direset menjadi Rp 0!');
+
+  // Kirim reset ke Google Sheets
+  try {
+    await postToGas('resetAllData', {});
+  } catch(e) {}
 }

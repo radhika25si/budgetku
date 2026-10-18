@@ -32,11 +32,11 @@ function setupSheet() {
     sWallets.getRange(1, 1, 1, 5).setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
     sWallets.setFrozenRows(1);
     
-    // Data default dompet
-    sWallets.appendRow(["W-01", "Tunai", 500000, "💵", "#10B981"]);
-    sWallets.appendRow(["W-02", "BCA", 2500000, "🏦", "#3B82F6"]);
-    sWallets.appendRow(["W-03", "GoPay", 150000, "📱", "#06B6D4"]);
-    sWallets.appendRow(["W-04", "ShopeePay", 100000, "🛍️", "#F97316"]);
+    // Data default dompet (Saldo awal 0 agar pengguna bisa isi sendiri)
+    sWallets.appendRow(["W-01", "Tunai", 0, "💵", "#10B981"]);
+    sWallets.appendRow(["W-02", "BCA", 0, "🏦", "#3B82F6"]);
+    sWallets.appendRow(["W-03", "GoPay", 0, "📱", "#06B6D4"]);
+    sWallets.appendRow(["W-04", "ShopeePay", 0, "🛍️", "#F97316"]);
   }
 
   // 3. Sheet Categories
@@ -149,6 +149,10 @@ function doPost(e) {
       result = payRecurringBill(postData.billId, postData.date, postData.wallet);
     } else if (action === "saveBudget") {
       result = saveBudget(postData.data);
+    } else if (action === "updateWalletBalance") {
+      result = updateWalletBalance(postData.data);
+    } else if (action === "resetAllData") {
+      result = resetAllData();
     } else {
       result = { error: "Unknown POST action: " + action };
     }
@@ -457,6 +461,41 @@ function saveBudget(data) {
     period
   ]);
   return { message: "Budget baru berhasil ditambahkan" };
+}
+
+function updateWalletBalance(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sWallets = ss.getSheetByName("Wallets");
+  if (!sWallets) throw new Error("Sheet Wallets tidak ditemukan!");
+
+  const values = sWallets.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][1] === data.wallet_name) {
+      sWallets.getRange(i + 1, 3).setValue(Number(data.new_balance || 0));
+      return { message: "Saldo dompet " + data.wallet_name + " berhasil diubah!" };
+    }
+  }
+  throw new Error("Dompet " + data.wallet_name + " tidak ditemukan!");
+}
+
+function resetAllData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. Kosongkan riwayat mutasi transaksi
+  const sTx = ss.getSheetByName("Transactions");
+  if (sTx && sTx.getLastRow() > 1) {
+    sTx.deleteRows(2, sTx.getLastRow() - 1);
+  }
+
+  // 2. Set seluruh saldo awal dompet ke 0
+  const sWallets = ss.getSheetByName("Wallets");
+  if (sWallets && sWallets.getLastRow() > 1) {
+    for (let i = 2; i <= sWallets.getLastRow(); i++) {
+      sWallets.getRange(i, 3).setValue(0);
+    }
+  }
+
+  return { message: "Semua riwayat transaksi dan saldo berhasil direset ke 0!" };
 }
 
 // 6. UTILITY FUNCTIONS
