@@ -115,7 +115,27 @@ document.addEventListener('DOMContentLoaded', () => {
   if (state.gasUrl) {
     fetchDashboard();
   }
+
+  // Auto-sync setiap kali user membuka kembali tab atau membuka HP
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.gasUrl) {
+      fetchDashboard();
+    }
+  });
 });
+
+async function refreshData() {
+  const icon = document.getElementById('refresh-icon');
+  if (icon) icon.classList.add('animate-spin');
+  showToast('Menyinkronkan data dari Google Sheets...', 'info');
+
+  await fetchDashboard();
+
+  setTimeout(() => {
+    if (icon) icon.classList.remove('animate-spin');
+    showToast('Data berhasil disinkronkan!');
+  }, 600);
+}
 
 // 3. TOAST NOTIFICATION SYSTEM
 function showToast(message, type = 'success') {
